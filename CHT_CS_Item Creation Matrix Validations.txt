@@ -1,0 +1,110 @@
+/**
+ * @NApiVersion 2.x
+ * @NScriptType ClientScript
+ * @NModuleScope SameAccount
+ */
+
+/*
+ * Script Author:		Chetu India Pvt. Ltd.
+ * Script Date:			April 04, 2022
+ * Script Type:			SuiteScript 2.X (Client Script)
+ * Script Description:	
+ * Last Modified:		(Please put a comment below with details of modification)
+ * Comments:				
+ */
+define(['N/search', 'N/currentRecord'],
+    function(search,currentRecord ) {
+		function pageInit(scriptContext) {
+			var currentRecord = scriptContext.currentRecord;
+			var mode = currentRecord.getValue({
+                fieldId: 'custrecord_wx_get_record_mode'
+            });
+			if(mode == true){
+				 currentRecord.setValue({
+                    fieldId: 'custrecord_wx_get_record_mode',
+					value: false
+                });
+			}
+		}
+		
+        function saveRecord(scriptContext) {
+            try {
+                debugger;
+				var recordMode = scriptContext.mode;
+                var currentRecord = scriptContext.currentRecord;
+                var itemType = currentRecord.getValue({
+                    fieldId: 'custrecordwbx_item_matrix_type'
+                });
+                var itemFamily = currentRecord.getValue({
+                    fieldId: 'custrecordwbx_item_matrix_family'
+                });
+                var infoId = currentRecord.getValue({
+                    fieldId: 'custrecordwbx_item_matrix_id'
+                });
+				var listBox = currentRecord.getValue({
+                    fieldId: 'custrecordwbx_item_matrix_list'
+                });
+				var mode = currentRecord.getValue({
+                    fieldId: 'custrecord_wx_get_record_mode'
+                });
+				alert('listBox '+ listBox);
+				var searchFilter;
+				if(itemFamily){
+					 searchFilter =  [
+					  ["custrecordwbx_item_matrix_family","anyof",itemFamily], 
+					  "AND", 
+					  ["custrecordwbx_item_matrix_type","anyof",itemType], 
+					  "AND", 
+					  ["custrecordwbx_item_matrix_id","is",infoId]				  
+				    ]
+				}
+				else{
+					searchFilter = [
+					  ["custrecordwbx_item_matrix_type","anyof",itemType], 
+					  "AND", 
+					  ["custrecordwbx_item_matrix_id","is",infoId]				  
+				    ]
+					
+				}
+				
+                /****saved search for the check type item*****/
+				var customrecord_wallbox_item_creat_matrixSearchObj = search.create({
+				   type: "customrecord_wallbox_item_creat_matrix",
+				   filters: searchFilter
+				    ,
+				   columns:
+				   [
+					  search.createColumn({name: "custrecord_wx_get_record_mode", label: "Mode "})
+				   ]
+				});
+				var searchResultCount = customrecord_wallbox_item_creat_matrixSearchObj.runPaged().count;
+			
+				/*customrecord_wallbox_item_creat_matrixSearchObj.run().each(function(result){
+				   mode = result.getValue({
+					   name: 'custrecord_wx_get_record_mode'
+				   
+				});*/
+				if(searchResultCount == 0){
+				    currentRecord.setValue({
+                    fieldId: 'custrecord_wx_get_record_mode',
+					value: true
+                });
+				return true;
+				}else if(mode == true){
+					return true;					
+				}else if(searchResultCount != 0){
+					alert("Combination already exist");
+					return false;
+				}
+				/***End***/
+            } catch (e) {
+                alert("error" + e);
+            }
+
+        }
+        return {
+			pageInit: pageInit,
+            saveRecord: saveRecord
+			
+        };
+    });
