@@ -1,0 +1,781 @@
+	/** 
+	 * @NApiVersion 2.1
+	 * @NScriptType MapReduceScript 
+	 */
+	define(['N/search', 'N/record', 'N/https', 'N/format'], function(search,
+	    record, https, format)
+	{
+	    function getInputData()
+	    {
+			var date = new Date();
+				var fullyear = date.getFullYear();
+				var month = date.getMonth() + 1;
+				var currentdate = date.getDate();
+				
+				var finalDate  = currentdate + '/' + month + '/' + fullyear;
+	       var purchaseorderSearchObj = search.create({
+   type: "purchaseorder",
+   filters:
+   [
+      ["type","anyof","PurchOrd"], 
+      "AND", 
+      ["custcol9","anyof","@NONE@"], 
+      "AND", 
+      ["mainline","is","F"], 
+      "AND", 
+      ["trandate","after","27/11/2023"]
+   ],
+   columns:
+   [
+       search.createColumn({
+         name: "internalid",
+         summary: "GROUP",
+         label: "Internal ID"
+      })
+   ]
+});
+var searchResultCount = purchaseorderSearchObj.runPaged().count;
+log.debug("purchaseorderSearchObj result count",searchResultCount);
+return purchaseorderSearchObj;
+	    }
+
+	    function map(context)
+	    {
+	       var searchResult = JSON.parse(context.value);
+		   log.debug('searchResult',searchResult);
+            var poId = searchResult.values;
+			log.debug('poId',poId);
+          // var obj12 = JSON.parse(poId);
+		  // log.debug('obj12',obj12);
+  var poIds =  parseInt(poId['GROUP(internalid)'].value);
+	      log.debug('poIds',poIds); 
+			 context.write({ 
+
+                    key: 'purchaseorder', 
+
+                    value: poIds
+
+                }); 
+	    }
+
+	    function reduce(context)
+	    {
+
+		//log.debug('context',context);
+		var searchResultCount = 0;
+				var searchResultCount2;
+				var searchResultCount3;
+				var searchResultCount4;
+				var searchResultCount6;
+				var searchResultCount5;
+				var searchResultCount7;
+				var searchResultCount8;
+var arrLength = context.values.length;
+log.debug('arrLength',arrLength);
+
+var poIdArr = context.values;
+log.debug('poIdArr',poIdArr);
+// var poId = poIdArr.GROUP(internalid);
+// log.debug('poId',poId);
+
+for(var ix = 0; ix<arrLength; ix++)	{
+		var purchaseorderSearchObj = search.create({
+   type: "purchaseorder",
+   filters:
+   [
+     ["type","anyof","PurchOrd"], 
+      "AND", 
+      ["mainline","is","F"], 
+      "AND", 
+      ["internalid","anyof",poIdArr[ix]]
+   ],
+   columns:
+   [
+      search.createColumn({
+         name: "internalid",
+         join: "item",
+         label: "Internal ID"
+      }),
+      search.createColumn({
+         name: "internalid",
+         join: "customer",
+         label: "Internal ID"
+      }),
+      search.createColumn({name: "class", label: "Business Unit"}),
+      search.createColumn({name: "department", label: "Department"}),
+	  search.createColumn({name: "internalid", label: "Internal ID"})
+   ]
+});
+var searchResultCountNa = purchaseorderSearchObj.runPaged().count;
+//log.debug("purchaseorderSearchObj result count",searchResultCount);
+var i = 0;
+purchaseorderSearchObj.run().each(function(result){
+          var itemId = result.getValue({
+				  name: "internalid",
+         join: "item"
+			});
+			log.debug('itemId',itemId);
+			var departmentId = result.getValue({
+				name: "department"
+			});
+			log.debug('departmentId',departmentId);
+			var departmentText = result.getText({
+				name: "department"
+			});
+			log.debug('departmentText',departmentText);
+			var subBusinessId = result.getValue({
+				name: "class"
+			});
+				log.debug('subBusinessId',subBusinessId);
+				var subBusinessText = result.getText({
+				name: "class"
+			});
+			log.debug('subBusinessText',subBusinessText);
+			var customerProjectId = result.getValue({
+				 name: "internalid",
+				join: "customer"
+			});
+				log.debug('customerProjectId',customerProjectId);	
+			var poId = result.getValue({
+				 name: "internalid"
+			});
+			var plRuleId;
+			if(itemId && departmentId && subBusinessId && customerProjectId){
+				log.debug('under condition 1')
+			var customrecord1148SearchObj = search.create({
+   type: "customrecord1148",
+   filters:
+   [
+      ["custrecord49","anyof",itemId], 
+      "AND", 
+      ["custrecord60","anyof",departmentId], 
+      "AND", 
+      ["custrecord58","anyof",subBusinessId], 
+      "AND", 
+      ["custrecord64","anyof",customerProjectId], 
+      "AND", 
+      ["custrecord51","is","T"], 
+      "AND", 
+      ["custrecord62","is","T"],
+	   "AND", 
+      ["custrecord66","is","F"]  
+   ],
+   columns:
+   [
+      search.createColumn({name: "altname", label: "Name"}),
+      search.createColumn({name: "internalid", label: "Internal ID"})
+   ]
+});
+ searchResultCount = customrecord1148SearchObj.runPaged().count;
+log.debug("customrecord1148SearchObj result count",searchResultCount);
+customrecord1148SearchObj.run().each(function(result){
+	plRuleId = result.getValue({
+		name: "internalid"
+	});
+	//log.debug('plRuleId',plRuleId);
+	if(plRuleId){
+		log.debug('plRuleId 0',plRuleId);
+		var poRecord = record.load({
+			type : 'purchaseorder',
+			id : poId
+		});
+		
+			
+				poRecord.setSublistValue({
+				sublistId : 'item',
+				fieldId : 'custcol9',
+				line : i,
+				value : plRuleId
+			});
+		
+		var poIds = poRecord.save();
+log.debug('poIds',poIds)				
+			}
+			//log.debug('plRuleId',plRuleId);
+   // .run().each has a limit of 4,000 results
+   return true;
+});
+			}
+			//log.debug('searchResultCount',searchResultCount)
+			if (plRuleId == null || plRuleId == ""){
+				
+				log.debug('under condition 2')
+			if(itemId && departmentId && subBusinessId && customerProjectId ){
+				var customrecord1148SearchObj = search.create({
+   type: "customrecord1148",
+   filters:
+   [
+      ["custrecord49","anyof",itemId], 
+      "AND", 
+      ["custrecord60","anyof",departmentId], 
+      "AND", 
+      ["custrecord58","anyof",subBusinessId], 
+      "AND", 
+      ["custrecord51","is","T"], 
+      "AND", 
+      ["custrecord66","is","T"],
+	  "AND", 
+      ["custrecord62","is","F"]
+   ],
+   columns:
+   [
+      search.createColumn({name: "altname", label: "Name"}),
+      search.createColumn({name: "internalid", label: "Internal ID"})
+   ]
+});
+ searchResultCount2 = customrecord1148SearchObj.runPaged().count;
+log.debug("customrecord1148SearchObj result count",searchResultCount2);
+customrecord1148SearchObj.run().each(function(result){
+	plRuleId = result.getValue({
+		name: "internalid"
+	});
+	
+if(plRuleId){
+	log.debug('plRuleId 1',plRuleId);
+	var poRecord = record.load({
+			type : 'purchaseorder',
+			id : poId
+		});
+		
+				poRecord.setSublistValue({
+				sublistId : 'item',
+				fieldId : 'custcol9',
+				line : i,
+				value : plRuleId
+			});
+		
+			var poIds = poRecord.save();
+log.debug('poIds',poIds)			
+			}
+			
+   return true;
+});
+
+			}
+			log.debug('under 3 if condition debug',searchResultCount2);
+		if (plRuleId == null || plRuleId == "") {
+			log.debug('under 3 if condition');
+				if(departmentId  && subBusinessId && (customerProjectId == null || customerProjectId == "")){
+					log.debug('under condition 3')
+			var customrecord1148SearchObj = search.create({
+   type: "customrecord1148",
+   filters:
+   [
+      ["custrecord49","anyof",itemId], 
+      "AND", 
+      ["custrecord60","anyof",departmentId], 
+      "AND", 
+	  ["custrecord58","anyof",subBusinessId], 
+      "AND",
+      ["custrecord51","is","T"], 
+      "AND", 
+      ["custrecord62","is","F"],
+	   "AND", 
+      ["custrecord66","is","F"], 
+   ],
+   columns:
+   [
+      search.createColumn({name: "altname", label: "Name"}),
+      search.createColumn({name: "internalid", label: "Internal ID"})
+   ]
+});
+ searchResultCount3 = customrecord1148SearchObj.runPaged().count;
+log.debug("customrecord1148SearchObj result count",searchResultCount3);
+customrecord1148SearchObj.run().each(function(result){
+	plRuleId = result.getValue({
+		name: "internalid"
+	})
+  if(plRuleId){
+	    log.debug('plRuleId 2',plRuleId);
+	  var poRecord = record.load({
+			type : 'purchaseorder',
+			id : poId
+		});
+		log.debug ('poRecord',poRecord);
+		
+				poRecord.setSublistValue({
+				sublistId : 'item',
+				fieldId : 'custcol9',
+				line : i,
+				value : plRuleId
+			});
+		
+		log.debug('plRuleId',plRuleId);
+		var poIds = poRecord.save();
+		log.debug('poIds',poIds);	
+			}
+			
+   return true;
+});
+			}
+			log.debug('inside condition 4 plRuleId',plRuleId);
+			if(plRuleId == null || plRuleId == ""){
+	log.debug('under condition 7')
+	log.debug('under condition 7 departmentId',departmentId);
+	log.debug('under condition 7 subBusinessId',subBusinessId);
+	log.debug('under condition 7 customerProjectId',customerProjectId);
+				if(departmentId  && subBusinessId && (customerProjectId == null || customerProjectId == "")){
+					log.debug('under condition 7 check')
+					var departmentcheck = departmentText.split(':');
+					log.debug('departmentcheck',departmentcheck);
+					var parentId;
+					var getValueDep = departmentcheck[0];
+					log.debug('getValueDep',getValueDep);
+					if(getValueDep){
+						var recLoad = record.load({
+							type : record.Type.DEPARTMENT,
+							id: departmentId
+						});
+						log.debug('recLoad',recLoad);
+						parentId = recLoad.getValue({
+							fieldId : 'parent'
+						});
+						log.debug('parentId',parentId);
+					}
+						log.debug('under condition inside if 6')	
+						if(parentId){
+			var customrecord1148SearchObj = search.create({
+   type: "customrecord1148",
+   filters:
+   [
+      ["custrecord49","anyof",itemId], 
+      "AND", 
+      ["custrecord60","anyof",parentId], 
+	   "AND", 
+      ["custrecord58","anyof",subBusinessId],
+      "AND", 
+      ["custrecord51","is","T"], 
+      "AND", 
+      ["custrecord62","is","F"],
+	   "AND", 
+      ["custrecord66","is","F"], 
+   ],
+   columns:
+   [
+      search.createColumn({name: "altname", label: "Name"}),
+      search.createColumn({name: "internalid", label: "Internal ID"})
+   ]
+});
+  searchResultCount7 = customrecord1148SearchObj.runPaged().count;
+log.debug("customrecord1148SearchObj result count",searchResultCount7);
+customrecord1148SearchObj.run().each(function(result){
+	plRuleId = result.getValue({
+		name: "internalid"
+	})
+  if(plRuleId){
+	 log.debug('plRuleId 5',plRuleId);
+	  var poRecord = record.load({
+			type : 'purchaseorder',
+			id : poId
+		});
+		log.debug('poRecord',poRecord);
+		log.debug('poRecord',poRecord);
+		
+				poRecord.setSublistValue({
+				sublistId : 'item',
+				fieldId : 'custcol9',
+				line : i,
+				value : plRuleId
+			});
+		
+			var poIds = poRecord.save();	
+			log.debug('poIds',poIds);	
+			}
+			
+   return true;
+});
+				}
+			}
+
+			
+			if(plRuleId == null || plRuleId == ""){
+	log.debug('under condition 8 check');
+	log.debug('under condition 7')
+	log.debug('under condition 7 departmentId',departmentId);
+	log.debug('under condition 7 subBusinessId',subBusinessId);
+	log.debug('under condition 7 customerProjectId',customerProjectId);
+				if(departmentId  && subBusinessId && (customerProjectId == null || customerProjectId == "")){
+					log.debug('under condition 8');
+					log.debug('subBusinessText',subBusinessText);
+					var businessUnitcheck = subBusinessText.split(':');
+					log.debug('businessUnitcheck',businessUnitcheck);
+					var businessUnitVal = businessUnitcheck[0]
+					log.debug('businessUnitVal',businessUnitVal);
+					var parentIdBusiness;
+					if(businessUnitVal){
+						var recLoad = record.load({
+							type : record.Type.CLASSIFICATION,
+							id: subBusinessId
+						});  
+				log.debug('recLoad',recLoad);					
+						log.debug('recLoad',recLoad);
+						parentIdBusiness = recLoad.getValue({
+							fieldId : 'parent'
+						});
+						log.debug('parentIdBusiness',parentIdBusiness);
+						 
+					     }
+						log.debug('under condition inside if 6')	
+						if(parentIdBusiness){
+			var customrecord1148SearchObj = search.create({
+   type: "customrecord1148",
+   filters:
+   [
+      ["custrecord49","anyof",itemId], 
+      "AND", 
+      ["custrecord60","anyof",departmentId], 
+	   "AND", 
+      ["custrecord58","anyof",parentIdBusiness],
+      "AND", 
+      ["custrecord51","is","T"], 
+      "AND", 
+      ["custrecord62","is","F"],
+	   "AND", 
+      ["custrecord66","is","F"], 
+   ],
+   columns:
+   [
+      search.createColumn({name: "altname", label: "Name"}),
+      search.createColumn({name: "internalid", label: "Internal ID"})
+   ]
+});
+  searchResultCount8 = customrecord1148SearchObj.runPaged().count;
+log.debug("customrecord1148SearchObj result count",searchResultCount8);
+customrecord1148SearchObj.run().each(function(result){
+	plRuleId = result.getValue({
+		name: "internalid"
+	})
+  if(plRuleId){
+	 log.debug('plRuleId 5',plRuleId);
+	  var poRecord = record.load({
+			type : 'purchaseorder',
+			id : poId
+		});
+		log.debug('poRecord',poRecord)
+		poRecord.setSublistValue({
+				sublistId : 'item',
+				fieldId : 'custcol9',
+				line : i,
+				value : plRuleId
+			});
+		
+			var poIds = poRecord.save();	
+			log.debug('poIds',poIds);	
+			}
+			
+   return true;
+});
+				}
+			}
+			
+			
+		if(plRuleId == null || plRuleId == ""){
+	log.debug('under condition 7')
+	log.debug('under condition 7 departmentId',departmentId);
+	log.debug('under condition 7 subBusinessId',subBusinessId);
+	log.debug('under condition 7 customerProjectId',customerProjectId);
+				if(departmentId  && subBusinessId && customerProjectId ){
+					log.debug('under condition 7 check')
+					var departmentcheck = departmentText.split(':');
+					log.debug('departmentcheck',departmentcheck);
+					var parentId;
+					var getValueDep = departmentcheck[0];
+					log.debug('getValueDep',getValueDep);
+					if(getValueDep){
+						var recLoad = record.load({
+							type : record.Type.DEPARTMENT,
+							id: departmentId
+						});
+						log.debug('recLoad',recLoad);
+						parentId = recLoad.getValue({
+							fieldId : 'parent'
+						});
+						log.debug('parentId',parentId);
+					}
+						log.debug('under condition inside if 6')	
+						if(parentId){
+		   var customrecord1148SearchObj = search.create({
+		   type: "customrecord1148",
+		   filters:
+		   [
+			  ["custrecord49","anyof",itemId], 
+			  "AND", 
+			  ["custrecord60","anyof",parentId], 
+			   "AND", 
+			  ["custrecord58","anyof",subBusinessId],
+			  "AND", 
+			  ["custrecord51","is","T"], 
+			  "AND", 
+			  ["custrecord62","is","F"],
+			   "AND", 
+			  ["custrecord66","is","T"], 
+		   ],
+		   columns:
+		   [
+			  search.createColumn({name: "altname", label: "Name"}),
+			  search.createColumn({name: "internalid", label: "Internal ID"})
+		   ]
+		});
+	  searchResultCount7 = customrecord1148SearchObj.runPaged().count;
+	log.debug("customrecord1148SearchObj result count",searchResultCount7);
+	customrecord1148SearchObj.run().each(function(result){
+		plRuleId = result.getValue({
+			name: "internalid"
+		})
+	  if(plRuleId){
+		 log.debug('plRuleId 5',plRuleId);
+		  var poRecord = record.load({
+				type : 'purchaseorder',
+				id : poId
+			});
+		
+				poRecord.setSublistValue({
+				sublistId : 'item',
+				fieldId : 'custcol9',
+				line : i,
+				value : plRuleId
+			});
+		
+			var poIds = poRecord.save();	
+			log.debug('poIds',poIds);	
+			}
+			
+   return true;
+});
+				}
+			}
+			
+				if(plRuleId == null || plRuleId == ""){
+				log.debug('under condition 8 check');
+				log.debug('under condition 7')
+	log.debug('under condition 7 departmentId',departmentId);
+	log.debug('under condition 7 subBusinessId',subBusinessId);
+	log.debug('under condition 7 customerProjectId',customerProjectId);
+				if(departmentId  && subBusinessId  && customerProjectId ){
+					log.debug('under condition 8');
+					log.debug('subBusinessText',subBusinessText);
+					var businessUnitcheck = subBusinessText.split(':');
+					log.debug('businessUnitcheck',businessUnitcheck);
+					var businessUnitVal = businessUnitcheck[0]
+					log.debug('businessUnitVal',businessUnitVal);
+					var parentIdBusiness;
+					if(businessUnitVal){
+						var recLoad = record.load({
+							type : record.Type.CLASSIFICATION,
+							id: subBusinessId
+						});
+						log.debug('recLoad',recLoad);
+						parentIdBusiness = recLoad.getValue({
+							fieldId : 'parent'
+						});
+						log.debug('parentIdBusiness',parentIdBusiness);
+						 
+					}
+						log.debug('under condition inside if 6')	
+						if(parentIdBusiness){
+			var customrecord1148SearchObj = search.create({
+   type: "customrecord1148",
+   filters:
+   [
+      ["custrecord49","anyof",itemId], 
+      "AND", 
+      ["custrecord60","anyof",departmentId], 
+	   "AND", 
+      ["custrecord58","anyof",parentIdBusiness],
+      "AND", 
+      ["custrecord51","is","T"], 
+      "AND", 
+      ["custrecord62","is","F"],
+	   "AND", 
+      ["custrecord66","is","T"], 
+   ],
+   columns:
+   [
+      search.createColumn({name: "altname", label: "Name"}),
+      search.createColumn({name: "internalid", label: "Internal ID"})
+   ]
+});
+  searchResultCount8 = customrecord1148SearchObj.runPaged().count;
+log.debug("customrecord1148SearchObj result count",searchResultCount8);
+customrecord1148SearchObj.run().each(function(result){
+	plRuleId = result.getValue({
+		name: "internalid"
+	})
+  if(plRuleId){
+	 log.debug('plRuleId 5',plRuleId);
+	  var poRecord = record.load({
+			type : 'purchaseorder',
+			id : poId
+		});
+		
+				poRecord.setSublistValue({
+				sublistId : 'item',
+				fieldId : 'custcol9',
+				line : i,
+				value : plRuleId
+			});
+		
+			var poIds = poRecord.save();	
+			log.debug('poIds',poIds);	
+			}
+			
+   return true;
+});
+				}
+			}
+			if(plRuleId == null || plRuleId == ""){
+			log.debug('inside condition 4',customerProjectId);
+			if(customerProjectId == ""){
+					log.debug('inside condition subbu')
+					if(subBusinessId != 59 ){
+					log.debug('under condition 4')
+   var customrecord1148SearchObj = search.create({
+   type: "customrecord1148",
+   filters:
+   [
+      ["custrecord49","anyof",itemId], 
+      "AND", 
+      ["custrecord60","anyof",departmentId], 
+      "AND", 
+      ["custrecord51","is","F"], 
+      "AND", 
+      ["custrecord66","is","F"], 
+      "AND", 
+      ["custrecord62","is","F"]
+   ],
+   columns:
+   [
+      search.createColumn({name: "altname", label: "Name"}),
+      search.createColumn({name: "internalid", label: "Internal ID"})
+   ]
+});
+searchResultCount4 = customrecord1148SearchObj.runPaged().count;
+log.debug("customrecord1148SearchObj result count4",searchResultCount4);
+customrecord1148SearchObj.run().each(function(result){
+	plRuleId = result.getValue({
+		name: "internalid"
+	})
+  if(plRuleId){
+	  log.debug('plRuleId 4',plRuleId);
+	   var poRecord = record.load({
+			type : 'purchaseorder',
+			id : poId
+		});
+		log.debug ('poRecord',poRecord);
+		poRecord.setSublistValue({
+				sublistId : 'item',
+				fieldId : 'custcol9',
+				line : i,
+				value : plRuleId
+			});
+		
+			var poIds = poRecord.save();	
+				log.debug('poIds',poIds);	
+			}
+			
+   return true;
+});
+			}	
+				}
+			log.debug('searchResultCount4',searchResultCount4);
+			if(plRuleId == null || plRuleId == "") {
+		log.debug('under condition 5')
+				if(departmentId  && customerProjectId && subBusinessId != 59){
+						log.debug('under condition inside if 5')	
+  var customrecord1148SearchObj = search.create({
+   type: "customrecord1148",
+   filters:
+   [
+      ["custrecord49","anyof",itemId], 
+      "AND", 
+      ["custrecord60","anyof",departmentId], 
+      "AND", 
+      ["custrecord51","is","F"], 
+      "AND", 
+      ["custrecord62","is","F"],
+	   "AND", 
+      ["custrecord66","is","T"], 
+   ],
+   columns:
+   [
+      search.createColumn({name: "altname", label: "Name"}),
+      search.createColumn({name: "internalid", label: "Internal ID"})
+   ]
+});
+  searchResultCount5 = customrecord1148SearchObj.runPaged().count;
+log.debug("customrecord1148SearchObj result count",searchResultCount5);
+customrecord1148SearchObj.run().each(function(result){
+	plRuleId = result.getValue({
+		name: "internalid"
+	})
+  if(plRuleId){
+	 log.debug('plRuleId 3',plRuleId);
+	  var poRecord = record.load({
+			type : 'purchaseorder',
+			id : poId
+		});
+		log.debug('poRecord',poRecord);
+		poRecord.setSublistValue({
+				sublistId : 'item',
+				fieldId : 'custcol9',
+				line : i,
+				value : plRuleId
+			});
+		
+			var poIds = poRecord.save();	
+			log.debug('poIds',poIds);	
+			}
+			
+   return true;
+});
+			}
+	
+
+//*** 6th Condition ***//
+
+			
+			
+		}
+		}
+			
+			
+}
+			
+			
+
+//*** 7th Condition ***//
+			
+			
+	}
+			}
+
+			
+			
+			
+			}
+			
+			
+			
+			
+			}	
+				
+				
+				
+				
+
+			}
+	i++;			
+             return true;
+});
+}
+		}
+
+	    function summarize(context)
+	    {}
+	    return {
+	        getInputData: getInputData,
+	        map: map,
+	        reduce: reduce,
+	        summarize: summarize
+	    };
+	});
