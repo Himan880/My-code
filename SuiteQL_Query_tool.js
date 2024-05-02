@@ -656,7 +656,7 @@ function htmlQueryUI() {
 						<div style="margin-top: 12px; padding: 12px; border: 0px solid #ccc; border-radius: 5px; background-color: #FFFFFF; font-size: 10pt; color: #848484;">
 							<p style="text-align: center; margin-bottom: 0px;">
 								SuiteQL Query Tool Version ${version}. 
-								Developed by Rishabh Gaur.
+								Developed by Himanshu Bhardwaj.
 							</p>
 						</div>		
 					</td>			
